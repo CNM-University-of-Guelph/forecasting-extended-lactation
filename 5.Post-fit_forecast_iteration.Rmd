@@ -1,5 +1,5 @@
 ---
-title: "4b. Post-iteration analysis"
+title: "5. Post-iteration analysis"
 output: 
   html_notebook: 
     fig_width: 8
