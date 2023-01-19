@@ -1,0 +1,589 @@
+---
+title: "Post-fitting tables and plots"
+author: "David Innes"
+output: 
+  html_notebook: 
+    fig_width: 10
+    toc: yes
+    code_folding: show
+editor_options: 
+  chunk_output_type: inline
+---
+
+This runs through generating:
+
+a) summary tables
+b) Plots
+c) correlations
+d) t-tests
+
+All from the output of the fitting of the 3 lactation models. 
+
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+
+suppressPackageStartupMessages(library(tidyverse, warn.conflicts = FALSE))
+library(patchwork)
+# requires: rstatix
+
+source("./functions/f_fitted_summary_tables.R")
+source("./functions/f_plot_mean_lac_curves.R")
+source("./functions/f_plot_individual_three_models.R")
+source("./functions/f_t_test_output.R")
+
+```
+
+
+# Import
+Uses the file exported by the ['2.fit_3_lac_models_parallel.R'](2.fit_3_lac_models_parallel.R) run on server.
+
+```{r echo=FALSE}
+# Import files. It's also stored as a .csv but using .rds is faster.
+# also ungroup all df to avoid unpredictable behaviour.
+
+combined_fit_stats <- 
+  readRDS("./Outputs/combined_fit_stats.rds") %>% 
+  ungroup() %>% 
+  #reorder to match desired output
+  mutate(Parity_class = factor(Parity_class, levels = c("Primiparous", "Multiparous")),
+         Model = factor(Model, levels = c('Wood', 'Wilmink','Dijkstra')))
+
+combined_params <- 
+  readRDS("./Outputs/combined_params.rds") %>% 
+  ungroup() %>% 
+  #reorder to match desired output
+  mutate(Parity_class = factor(Parity_class, levels = c("Primiparous", "Multiparous")),
+         Model = factor(Model, levels = c('Wood', 'Wilmink','Dijkstra')))
+
+combined_preds_fitted <- 
+  readRDS("./Outputs/combined_preds_fitted.rds") %>% 
+  ungroup() 
+
+# for t-tests
+cleaned_data <- readRDS("./Outputs/cleaned_data_out.rds") %>% ungroup()
+
+
+```
+
+# a) Summary tables
+## Parity
+### calculate summary tables
+```{r message=FALSE}
+Parity_params_summary_raw <- 
+  combined_params %>% 
+    f_fitted_summary_tables(groups_by = c(Model, Parity_class))
+```
+
+```{r}
+Parity_params_summary_formatted <- 
+  f_format_pub(Parity_params_summary_raw, groups_by = c(Model, Parity_class)) 
+
+Parity_params_summary_formatted 
+```
+
+
+### Fit stats summary
+```{r message=FALSE}
+# summarise mean and SD
+parity_fit_stats <- 
+  combined_fit_stats %>% 
+  f_fit_stats_summary(groups_by = c(Model, Parity_class))
+
+# summarise output for table in paper
+parity_fit_stats_formatted <-
+  parity_fit_stats %>% 
+   select(Model, Parity_class, starts_with(c("R2","MAE", "RMSPE", "CCC", "r_","Cb", "DW"))) %>% 
+  mutate(across(where(is.double), ~round(.x,2))) %>% 
+  f_format_pub(groups_by=c(Model, Parity_class))
+
+
+parity_fit_stats_formatted
+```
+
+
+
+## Lactation length
+### Summary
+```{r message=FALSE}
+laclen_params_raw <- 
+  f_fitted_summary_tables(combined_params, groups_by = c(Model,Lac_len_group))
+
+```
+
+
+### Formatted for pub
+```{r}
+
+laclen_params_formatted <-
+  f_format_pub(laclen_params_raw, c(Model,Lac_len_group))
+
+laclen_params_formatted
+```
+
+
+### Fit stats summary
+```{r message=FALSE}
+# summarise mean and SD
+laclen_fit_stats <- 
+  combined_fit_stats %>% 
+  f_fit_stats_summary(groups_by = c(Model, Lac_len_group))
+
+# summarise output for table in paper
+laclen_fit_stats_formatted <-
+  laclen_fit_stats %>% 
+   select(Model, Lac_len_group, starts_with(c("R2","MAE", "RMSPE","CCC", "r_","Cb", "DW"))) %>% 
+  mutate(across(where(is.double), ~round(.x,2))) %>% 
+  f_format_pub(groups_by=c(Model, Lac_len_group))
+
+
+laclen_fit_stats_formatted
+```
+
+
+## Output Tables
+```{r}
+# add to named list. Names = sheet names in excel output
+tables_out_list <- 
+  list(
+    Parity_params_raw = Parity_params_summary_raw,
+    Parity_params_formatted = Parity_params_summary_formatted ,
+    Parity_fit_stats_raw = parity_fit_stats,
+    Parity_fit_stats_formatted = parity_fit_stats_formatted,
+    LacLen_params_raw = laclen_params_raw,
+    LacLen_params_formatted = laclen_params_formatted,
+    LacLen_fit_stats_raw = laclen_fit_stats,
+    LacLen_fit_stats_formatted = laclen_fit_stats_formatted
+     )
+
+# export
+openxlsx::write.xlsx(tables_out_list,
+                     file = paste0("./Outputs/model_summary_tables ",
+                                   format(Sys.time(), "%Y%m%d_%H%M") ,
+                                   ".xlsx"),
+                     colWidths = "auto")
+```
+
+
+# b) Plots
+## Grouped plots
+### by Parity
+```{r}
+f_plot_mean_lac_curves(combined_preds_fitted_in = combined_preds_fitted,
+                       groups_by = Parity_class,
+                      plot_n_colour = "log2")
+```
+
+### by Lactation length
+```{r fig.width = 7}
+f_plot_mean_lac_curves(combined_preds_fitted_in = combined_preds_fitted,
+                       groups_by = Lac_len_group,
+                      plot_n_colour = "log2")
+
+
+```
+
+
+## Residual summary plots
+
+```{r}
+(p_resid_parity <- 
+  f_plot_mean_lac_curves(combined_preds_fitted_in = combined_preds_fitted,
+                       groups_by = Parity_class,
+                      plot_residuals = TRUE)+
+  labs(title = "a)")
+)
+```
+
+```{r message=FALSE}
+(p_resid_lacgroup <- 
+  f_plot_mean_lac_curves(combined_preds_fitted_in = combined_preds_fitted,
+                       groups_by = Lac_len_group,
+                      plot_residuals = TRUE)+
+  labs(title = "b)")
+)
+```
+
+
+## combined residual plots for publication
+```{r fig.height = 8, fig.width = 6}
+# plot one of top of each other
+(p_resid_combined_publish <- p_resid_parity / p_resid_lacgroup)
+
+```
+
+Save plots in .png for word and .tiff for high resolution:
+```{r eval=FALSE}
+# .png
+ggsave(filename = paste0("residual_points_combined_", 
+                         format(Sys.time(), "%Y%m%d_%H%M") ,
+                         ".png"),
+              path = "./Outputs/",
+              plot = p_resid_combined_publish,
+              dpi = 600,
+              width=9,
+              height=10)
+
+# .tiff  - high resolution
+ggsave(filename = paste0("residual_points_combined_", 
+                         format(Sys.time(), "%Y%m%d_%H%M") ,
+                         ".tiff"),
+              path = "./Outputs/",
+              plot = p_resid_combined_publish,
+              dpi = 600,
+              width=9,
+              height=10)
+```
+
+
+
+## Observed with error
+plot observed points with error bars
+
+```{r}
+observed_means <- 
+  combined_preds_fitted %>% 
+  filter(Model == "Dijkstra") %>% 
+  group_by(Parity_class, Model, DIM) %>%
+  mutate(Parity_class = factor(Parity_class, levels = c("Primiparous", "Multiparous"))) %>% 
+  summarise(mean_observed_my = mean(my, na.rm=TRUE),
+            mean_observed_SD = sd(my, na.rm=TRUE),
+            n = n(),
+            mean_osbserved_SEM = mean_observed_SD/sqrt(n))
+
+p_observed_summary <- observed_means %>% 
+  ggplot()+
+  geom_smooth(aes(x=DIM, y = mean_observed_my - mean_osbserved_SEM), color = 'grey10', linewidth = 0.8, span = 0.05, se=FALSE)+
+  geom_smooth(aes(x=DIM, y = mean_observed_my + mean_osbserved_SEM), color = 'grey10', linewidth = 0.8, span = 0.05, se=FALSE)+
+  geom_point(aes(x=DIM, y = mean_observed_my, colour = n), alpha=0.3, size = 2)+
+  viridis::scale_color_viridis(direction = -1, option = "H", trans = "log2", labels = ~round(.,0), begin = 0.1)+
+  facet_wrap(facets="Parity_class", ncol = 1)+
+  scale_x_continuous(n.breaks = 10)+
+  ggpubr::theme_classic2()+
+  xlab("Days in milk (DIM)")+
+  ylab("Milk Yield (kg/d)")
+  
+p_observed_summary
+  
+```
+
+Save:
+```{r eval=FALSE}
+# .png
+ggsave(filename = paste0("p_observed_summary ", 
+                         format(Sys.time(), "%Y%m%d_%H%M") ,
+                         ".png"),
+              path = "./Outputs/",
+              plot = p_observed_summary,
+              dpi = 600,
+              width=9,
+              height=7)
+
+
+# .tiff
+ggsave(filename = paste0("p_observed_summary ", 
+                         format(Sys.time(), "%Y%m%d_%H%M") ,
+                         ".tiff"),
+              path = "./Outputs/",
+              plot = p_observed_summary,
+              dpi = 600,
+              width=9,
+              height=7)
+```
+
+
+## Individual plot examples
+
+
+### Get worst and best fits
+
+```{r}
+worst_fits <- combined_fit_stats %>% group_by(ID) %>% summarise(mean_MAE = mean(MAE, na.rm=TRUE)) %>%  slice_max(order_by = mean_MAE, n = 6) %>% arrange(desc(mean_MAE))
+
+worst_fits_ID <- worst_fits %>% pull(ID) %>% unique()
+
+best_fits <- combined_fit_stats %>% group_by(ID) %>% summarise(mean_MAE = mean(MAE, na.rm=TRUE)) %>%  slice_min(order_by = mean_MAE, n = 6) %>% arrange(mean_MAE)
+
+best_fits_ID <- best_fits %>% pull(ID) %>% unique()
+```
+
+
+#### 6 best fits 
+Average MAE
+
+```{r fig.width = 10, message=FALSE}
+(p_best_fits_a <- 
+  f_plot_individual_three_models(
+    combined_fit_stats,
+    combined_preds_fitted, 
+    best_fits_ID, 
+    y_label_loc = 50,
+    "a)")
+)
+
+```
+
+
+#### 6 worst fits
+Using average MAE
+
+```{r fig.width = 10, message = FALSE}
+(
+p_worst_fits_b <- 
+  f_plot_individual_three_models(
+    combined_fit_stats, 
+    combined_preds_fitted,
+    worst_fits_ID, 
+    y_label_loc = 8,
+    plot_title = "b)")
+)
+                     
+```
+
+
+### combined best/worst plots for publication
+```{r message=FALSE}
+(p_best_worst_publish <- p_best_fits_a / p_worst_fits_b)
+```
+
+save:
+```{r eval=FALSE}
+#.png
+ggsave(filename = paste0("p_ind_fits_best_worst_combined ", 
+                         format(Sys.time(), "%Y%m%d_%H%M") ,
+                         ".png"),
+              path = "./Outputs/",
+              plot = p_best_worst_publish,
+              dpi = 600,
+              width=10,
+              height=12)
+
+# .tiff
+ggsave(filename = paste0("p_ind_fits_best_worst_combined ", 
+                         format(Sys.time(), "%Y%m%d_%H%M") ,
+                         ".tiff"),
+              path = "./Outputs/",
+              plot = p_best_worst_publish,
+              dpi = 600,
+              width=10,
+              height=12)
+```
+
+
+# c) Correlations
+```{r message=FALSE}
+working_subset <- 
+  left_join(
+  combined_fit_stats %>% select(ID, Parity, Parity_class, Model, RMSPE, MAE),
+  combined_params %>% select(ID, Parity, Model, Mp, Persistency)
+)
+
+
+cor_tables_GOF_Mp_Persistency <- 
+working_subset %>% 
+  group_by(Model) %>% 
+  summarise(cor_RMSPEvsMp = cor(RMSPE, Mp, use = 'complete.obs'),
+            cor_RMSPEvsPersist = cor(RMSPE, Persistency, use = 'complete.obs'),
+            cor_MAEvsMp = cor(MAE, Mp, use = 'complete.obs'),
+            cor_MAEvsPersist = cor(MAE, Persistency, use = 'complete.obs'))
+  
+cor_tables_GOF_Mp_Persistency
+```
+
+```{r}
+data.table::fwrite(cor_tables_GOF_Mp_Persistency, "./Outputs/cor_tables_GOF_Mp_Persistency.csv")
+```
+
+
+# d) t-tests
+Run t test comparisons between mean values.
+Comparisons between parity or lactation length, within each model.
+Output tables to 1 excel file.
+
+## Format data for downstream
+```{r}
+# convert to long format, set some cols as factors
+
+# Parameters:
+combined_params_long <-  
+  combined_params %>% 
+  ungroup() %>% 
+  mutate(Parity_class = factor(Parity_class, levels = c("Primiparous", "Multiparous")),
+         Model = factor(Model, levels = c('Wood', 'Wilmink','Dijkstra'))) %>% 
+  rename_at(vars(contains("Mp")), list(~str_replace(., "Mp", "Peak_Yield_kg"))) %>% 
+  rename_at(vars(contains("Tp")), list(~str_replace(., "Tp", "Time_to_PY_d"))) %>% 
+  select(-contains('maxDIM'), -contains('tmax'), -contains('t_max')) %>% 
+  select(ID, Parity_class, Model, Lac_len_group, where(is.numeric)) %>% 
+    pivot_longer(cols = where(is.double),
+               values_to = 'value',
+               names_to = 'variable')
+
+
+# fit stats:
+combined_fits_long <-  
+  combined_fit_stats %>% 
+  ungroup() %>% 
+  mutate(Parity_class = factor(Parity_class, levels = c("Primiparous", "Multiparous")),
+         Model = factor(Model, levels = c('Wood', 'Wilmink','Dijkstra'))) %>% 
+  select(ID, Parity_class, Model, Lac_len_group, where(is.numeric)) %>% 
+    pivot_longer(cols = where(is.double),
+               values_to = 'value',
+               names_to = 'variable')
+
+```
+
+
+
+
+## Parity comparison
+
+### Model parameters
+Iterate through groups for t test.
+```{r}
+# Run t test on all groups, using nesting as we are comparing Parity WITHIN Model.
+model_parity_t_test_out <- 
+ combined_params_long %>% 
+  f_t_test_output(group_by = 'Parity_class')
+
+
+model_parity_t_test_out
+```
+
+### letter comparisons
+This prints letters to help interpretation
+```{r}
+# format to get letters in similar format to means.
+model_parity_letters <- 
+  model_parity_t_test_out %>% 
+  mutate(primiparous = case_when(sig == TRUE ~ "a", TRUE ~ "NS"),
+         multiparous = case_when(sig == TRUE ~ "b", TRUE ~ "NS")) %>% 
+  select(Model, variable, primiparous, multiparous)  %>% 
+    pivot_longer(cols = primiparous:multiparous) %>% 
+    pivot_wider(names_from = c(Model, name),
+                names_sep = "_",
+                values_from = value)
+
+model_parity_letters
+
+```
+
+
+### Fit stats comparison
+```{r}
+# Run t test on all groups, using nesting as we are comparing Parity WITHIN Model.
+fits_parity_t_test_out <- 
+  combined_fits_long %>% 
+  f_t_test_output(group_by = 'Parity_class')
+
+
+fits_parity_t_test_out
+
+```
+
+### letter comparisons
+This prints letters to help interpretation
+```{r}
+# format to get letters in similar format to means.
+stats_parity_letters <- 
+  fits_parity_t_test_out %>% 
+  mutate(primiparous = case_when(sig == TRUE ~ "a", TRUE ~ "NS"),
+         multiparous = case_when(sig == TRUE ~ "b", TRUE ~ "NS")) %>% 
+  select(Model, variable, primiparous, multiparous)  %>% 
+    pivot_longer(cols = primiparous:multiparous) %>% 
+    pivot_wider(names_from = c(Model, name),
+                names_sep = "_",
+                values_from = value)
+
+stats_parity_letters
+
+```
+
+## Lactation length comparison
+
+### Model parameters
+```{r}
+
+model_lac_group_t_test <- 
+  combined_params_long %>% 
+  f_t_test_output(group_by = 'Lac_len_group')
+
+
+model_lac_group_t_test
+```
+
+### letter comparisons
+```{r}
+# format to get letters in similar format to means.
+model_lac_group_letters <- 
+  model_lac_group_t_test %>% 
+  mutate(group1 = case_when(sig == TRUE ~ "a", TRUE ~ "NS"),
+         group2 = case_when(sig == TRUE ~ "b", TRUE ~ "NS")) %>% 
+  select(Model, variable, group1, group2) %>% 
+    pivot_longer(cols = group1:group2) %>% 
+    pivot_wider(names_from = c(Model, name),
+                names_sep = "_",
+                values_from = value)
+
+model_lac_group_letters
+
+```
+
+
+### Fit stats comparison
+
+```{r}
+
+fits_groups_t_test_out <- 
+  combined_fits_long %>% 
+ f_t_test_output(group_by = 'Lac_len_group')
+
+
+fits_groups_t_test_out
+```
+
+
+
+### letters
+```{r}
+# format to get letters in similar format to means.
+fits_lac_group_letters <- 
+  fits_groups_t_test_out %>% 
+  mutate(group1 = case_when(sig == TRUE ~ "a", TRUE ~ "NS"),
+         group2 = case_when(sig == TRUE ~ "b", TRUE ~ "NS")) %>% 
+  select(Model, variable, group1, group2) %>% 
+    pivot_longer(cols = group1:group2) %>% 
+    pivot_wider(names_from = c(Model, name),
+                names_sep = "_",
+                values_from = value)
+
+fits_lac_group_letters
+
+```
+
+
+
+# Output Tables
+```{r}
+# add to named list. Names = sheet names in excel output
+tables_out_list <- 
+  list(
+    parity_params_t_test= model_parity_t_test_out,
+    parity_params_letters = model_parity_letters,
+    parity_stats_t_test = fits_parity_t_test_out,
+    parity_stats_letters = stats_parity_letters,
+    lac_len_params_t_test = model_lac_group_t_test,
+    lac_len_params_letters = model_lac_group_letters,
+    lac_len_stats_t_test = fits_groups_t_test_out,
+    lac_len_stats_lettesr = fits_lac_group_letters
+     )
+
+
+# export
+openxlsx::write.xlsx(tables_out_list,
+                     file = paste0("./Outputs/t_test_tables ",
+                                   format(Sys.time(), "%Y%m%d_%H%M") ,
+                                   ".xlsx"),
+                     colWidths = "auto")
+
+```
+
+

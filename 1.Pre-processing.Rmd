@@ -1,0 +1,189 @@
+---
+title: "1. Pre-processing data"
+output: 
+  html_notebook: 
+    fig_width: 8
+    toc: yes
+    code_folding: show
+author: "David Innes"
+editor_options: 
+  chunk_output_type: inline
+---
+
+This whole analysis requires a data frame with only the following columns:
+
+1. `Cow` - cow's number identification
+2. `Parity` - number representing what parity the lactation represents
+3. `ID` -  lactation ID in the format: Cow_Parity (This can be added here using `mutate()` and `str_c()`)
+4. `DIM` - days in milk; d
+5. `my` - milk yield; kg
+
+
+Step 1 (in this file) has 3 main steps:
+
+1. clean data - described in function: `f_clean_lac_data.R`
+2. describe data - `f_descriptive_stats.R`
+3. summarise lactation data - `f_summary_tables.R`
+
+
+```{r setup, echo=TRUE, results='hide'}
+suppressPackageStartupMessages(library(tidyverse))
+library(slider)
+
+# load required functions:
+source("./functions/f_clean_lac_data.R")
+source("./functions/f_descriptive_stats.R")
+source("./functions/f_summary_tables.R")
+
+```
+
+# Import
+```{r echo=TRUE, results='hide'}
+# Import file
+workingfile <- data.table::fread("./Inputs/simulated_exlac_data.csv") %>% 
+  #rename column to match requirements of scripts:
+  rename(Cow = cow_ID)
+
+glimpse(workingfile) 
+
+```
+
+# a) Data cleaning
+
+## Execute cleaning steps
+```{r echo=TRUE, results='hide'}
+# generate_plots = FALSE prevents individual lactation plots from being generated.
+list_output <- f_clean_lac_data(workingfile, generate_plots = TRUE)
+```
+
+## Print log
+Because this is a synthetic dataset, many errors are not detected here. 
+```{r}
+list_output$log$Step1_NA_removed
+
+list_output$log[-1]
+
+```
+
+## Diagnostic Plots
+```{r}
+list_output$plots$n_per_DIM_prefilter
+
+list_output$plots$n_per_DIM_postfilter
+```
+
+### Plot of lactations removed with break mid-lac
+
+```{r}
+list_output$plots$lacs_mid_break_REMOVED
+```
+
+
+## Example of output plots
+```{r eval=FALSE}
+# Only works if generate_plots = TRUE
+list_output$plots$list_gap_classification_plots$`1035_2`
+
+list_output$plots$list_outlier_detection_plots$`1705_3`
+```
+
+## Save plots
+This can take a while, and is better executed on a larger computer.
+```{r eval=FALSE, include=TRUE}
+# Only works if generate_plots = TRUE
+
+
+f_plot <- function(.x, .y){
+  plot_in <- .x
+  name_in <- .y
+  
+  p <- ggsave(filename = paste0("outlier_plot_",name_in,".png"),
+               path = "./Plots/Outlier_Detection/", 
+              #path = "./R_lac/Plots/Gap_Detection/",
+                plot =  plot_in,
+                dpi = 150,
+                width=10,
+               height=7)
+  }
+  
+list_to_plot <- list_output$plots$list_outlier_detection_plots[1:3]
+#list_to_plot <- list_output$plots$list_gap_classification_plots[1:3]
+
+map2(.x = list_to_plot, .y = names(list_to_plot), .f = f_plot )
+
+
+
+```
+
+
+## OUTPUT total_MY_summary
+This is required for downstream analysis, so save here.
+Saving files as .rds is much quicker and preserves some formatting.
+
+```{r}
+# Save cleaned_data. 
+saveRDS(list_output$cleaned_data, "./Outputs/cleaned_data_out.rds")
+
+data.table::fwrite(list_output$total_MY_summary, "./Outputs/total_MY_summary_out.csv")
+saveRDS(list_output$total_MY_summary, "./Outputs/total_MY_summary_out.rds")
+
+```
+
+
+
+# b) Summary Descriptive Stats
+This function summarises the data to match output for Table 1 in publication. 
+
+```{r}
+(df_descriptive_stats_FULL <- 
+  f_descriptive_stats(cleaned_data_in = list_output$cleaned_data)
+ )
+```
+
+
+
+# c) Summarise characteristics of lactation
+This data is calculated to write in-text, not in a table.
+## by Parity
+```{r}
+(parity_summary <- f_summary_tables(list_output$cleaned_data, 
+                   list_output$total_MY_summary,
+                   to_group_by = Parity_class))
+
+# view only means
+#parity_summary %>% filter(str_detect(name, 'mean'))
+
+```
+
+## by Lactation length
+```{r}
+
+(lac_len_summary <- f_summary_tables(list_output$cleaned_data, 
+                   list_output$total_MY_summary,
+                   to_group_by = Lac_len_group))
+
+
+#lac_len_summary %>% filter(str_detect(name, 'mean'))
+
+```
+
+
+# OUTPUT tables to excel
+Save an excel file with different outputs in each sheet to the `Outputs/` folder.
+```{r}
+# add to named list. Names = sheet names in excel output
+tables_out_list <- 
+  list(df_descriptive_stats_FULL = df_descriptive_stats_FULL,
+     parity_summary = parity_summary,
+     lac_len_summary = lac_len_summary
+     )
+
+# adds a timestamp to filename:
+openxlsx::write.xlsx(tables_out_list,
+                     file = paste0("./Outputs/lac_summary_tables ",
+                                   format(Sys.time(), "%Y%m%d_%H%M") ,
+                                   ".xlsx"),
+                     colWidths = "auto")
+# 
+```
+

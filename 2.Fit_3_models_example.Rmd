@@ -1,0 +1,52 @@
+---
+title: "2. Fit 3 lactation models"
+output: 
+  html_notebook: 
+    fig_width: 8
+    toc: yes
+    code_folding: show
+author: "David Innes"
+editor_options: 
+  chunk_output_type: inline
+---
+
+This step is slow, but is designed so that the `2.fit_3_lac_models_parallel.R` could be executed on a server for faster processing. 
+We run it below to show terminal output, but other outputs are saved to `./Outputs/` folder and `/Plots` folder automatically.
+
+
+Output: saves 4x dataframes:
+
+1. Combined_params
+2. Combined_fit_stats
+3. Combined_preds
+4. combined fit stats
+Also saves plots. 
+
+It also leaves various objects in environment which can be perused as well, particularly if you want to access the actual fit objects. See the source code for how it is structured (in nested data frames).
+
+It requires the output from step 1 to be saved as: `/Outputs/cleaned_data_out.rds`
+
+# Requirements:
+```{r eval=FALSE}
+# these are not executed here, but are required by the script to run
+suppressPackageStartupMessages(library(tidyverse, warn.conflicts = FALSE))
+library(nlme)
+library(nls.multstart)
+library(broom)
+library(purrr)
+library(multidplyr)
+library(car)
+
+
+source("./functions/f_lac_equations.R")
+source("./functions/f_goodness_of_fit.R")
+
+```
+
+# Execute:
+This can be slow on a laptop!
+```{r}
+source("2.fit_3_lac_models_parallel.R")
+```
+
+

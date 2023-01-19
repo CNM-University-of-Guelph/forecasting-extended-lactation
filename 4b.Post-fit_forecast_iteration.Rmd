@@ -1,0 +1,567 @@
+---
+title: "4b. Post-iteration analysis"
+output: 
+  html_notebook: 
+    fig_width: 8
+    toc: yes
+    code_folding: show
+author: "David Innes"
+editor_options: 
+  chunk_output_type: inline
+---
+
+This takes the output from Step 4 to make tables and plots. The input can therefore be 'constrained' or 'default/unconstrained', referring to if the parameters b, b0 and c were constrained within 'bounds' when fitting with nlis. All output is labelled based on flag (TRUE/FALSE) set at start.
+
+```{r setup, echo=FALSE, warning=FALSE, message=FALSE}
+suppressPackageStartupMessages(library(tidyverse, warn.conflicts = FALSE))
+library(ggpp) #for geom_table()
+
+source("./functions/f_lac_equations.R")
+source("./functions/f_goodness_of_fit.R")
+source("./functions/f_fitted_summary_tables.R")
+```
+
+```{r}
+# SET FLAG FOR IF OUTPUT IS CONSTRAINED (T) OR DEFAULT (F):
+is_constrained <- FALSE
+```
+
+# Import
+
+## constrained:
+
+```{r echo=FALSE}
+if(is_constrained){
+i_combined_fit_stats <- 
+  readRDS("./Outputs/params_constrained_iterated_DIM_fit_stats.rds") %>% 
+  ungroup() 
+
+i_combined_params <- 
+  readRDS("./Outputs/params_constrained_iterated_DIM_params.rds") %>% 
+  ungroup() 
+
+i_fitted_MY_all <- 
+  readRDS("./Outputs/params_constrained_iterated_DIM_fitted_MY_all.rds") %>% 
+  ungroup() 
+
+i_fitted_305d_MY <- 
+  readRDS("./Outputs/params_constrained_iterated_DIM_fitted_305d_MY.rds") %>% 
+  ungroup()
+
+
+i_combined_fit_info <- 
+  readRDS("./Outputs/params_constrained_iterated_fit_info_.rds") %>% 
+  ungroup()
+
+
+i_combined_preds_out <- 
+  readRDS("./Outputs/params_constrained_iterated_preds_out.rds") %>% 
+  ungroup()
+
+
+P_values_wide <- 
+  readRDS("./Outputs/params_constrained_iterated_Pvalues_wide.rds") %>% 
+  ungroup()
+
+
+P_values_full <- 
+  readRDS("./Outputs/params_constrained_iterated_Pvalues_FULL.rds") %>% 
+  ungroup()
+} 
+```
+
+## default:
+
+```{r echo=FALSE}
+if(is_constrained == FALSE){
+i_combined_fit_stats <- 
+  readRDS("./Outputs/params_default_iterated_DIM_fit_stats.rds") %>% 
+  ungroup() 
+
+i_combined_params <- 
+  readRDS("./Outputs/params_default_iterated_DIM_params.rds") %>% 
+  ungroup() 
+
+i_fitted_MY_all <- 
+  readRDS("./Outputs/params_default_iterated_DIM_fitted_MY_all.rds") %>% 
+  ungroup() 
+
+i_fitted_305d_MY <- 
+  readRDS("./Outputs/params_default_iterated_DIM_fitted_305d_MY.rds") %>% 
+  ungroup()
+
+
+P_values_wide <- 
+  readRDS("./Outputs/params_default_iterated_Pvalues_wide.rds") %>% 
+  ungroup()
+
+
+P_values_full <- 
+  readRDS("./Outputs/params_default_iterated_Pvalues_FULL.rds") %>% 
+  ungroup()
+}
+```
+
+
+```{r}
+# check n
+i_combined_params %>% group_by(DIM_thresh) %>% count()
+```
+
+# Summarise params
+
+All Inf values are set to Nan and therefore not included within summary stats
+
+```{r message=FALSE}
+summarised_params <- 
+    i_combined_params %>% 
+  f_fitted_summary_tables(groups_by=DIM_thresh)
+
+summarised_params
+
+```
+
+## Format
+
+```{r message=FALSE}
+
+summarised_params_formatted <- 
+  summarised_params %>% 
+  mutate(DIM_thresh = factor(DIM_thresh, 
+                             levels = as.character(c(30, 60, 90, 120, 150, 200, 250, 300)))) %>% 
+  f_format_pub(groups_by = DIM_thresh) %>% 
+  mutate(across(where(is.double),~signif(.x,3)))
+
+summarised_params_formatted 
+  
+
+```
+
+# Summarise fit stats
+
+```{r message=FALSE}
+summarised_fit_stats <- 
+  i_combined_fit_stats %>%
+  f_fitted_summary_tables(groups_by=DIM_thresh)
+ 
+  
+summarised_fit_stats
+```
+
+## Format
+
+```{r message=FALSE}
+fit_stats_formatted <- 
+  summarised_fit_stats %>% 
+  mutate(DIM_thresh = factor(DIM_thresh, 
+                             levels = as.character(c(30, 60, 90, 120, 150, 200, 250, 300)))) %>% 
+  
+  select(DIM_thresh, starts_with(c("R2","MAE", "RMSPE", "CCC","r_","Cb", "DW"))) %>% 
+  f_format_pub(DIM_thresh) %>% 
+  mutate(across(where(is.double),~signif(.x,3)))
+
+fit_stats_formatted
+```
+
+# Plots
+
+## function Plot some individual plots
+
+```{r}
+
+f_plot_sectional <- function(IDs, plot_title = "Title", plot_table = FALSE){
+    
+  mean_params_ind <- 
+    i_combined_params %>% 
+    filter(ID %in% IDs) %>% 
+    mutate(DIM_thresh = factor(DIM_thresh, 
+                               levels = as.character(c(30, 60, 90, 120, 150, 200, 250, 300)))) 
+    
+  
+  p <- i_fitted_MY_all %>%
+    filter(ID %in% IDs) %>% 
+    left_join(mean_params_ind , by = c('ID','DIM_thresh')) %>% 
+      mutate(fitted_MY =  dijkstra_eq(a,b,b0,c,DIM)) %>% 
+      select(-a,-b,-b0,-c) %>% 
+     mutate(ID = factor(ID, ordered=TRUE,  levels = as_factor(IDs))) %>% 
+    filter(fitted_MY <= 70) %>% 
+    group_by(ID) %>% 
+    ggplot()+
+    geom_point(aes(x=DIM, y=my))+
+    geom_line(aes(x=DIM, y=fitted_MY, colour = DIM_thresh), linewidth = 1)+
+    scale_x_continuous(n.breaks = 15)+ 
+    labs(title = plot_title)+
+    ggpubr::theme_classic2()+
+    viridis::scale_colour_viridis(discrete = TRUE, option = "H", begin=0.15, end=0.85)+
+    geom_vline(aes(xintercept=305), colour='red',linetype = 'dashed')+
+    geom_label(aes(x = 305, y = 55, label = '305 DIM'), 
+             colour = 'red', label.size = 0.8, size = 9/.pt, 
+             data = ~slice_head(.x, n=1))+
+    facet_wrap(facets = "ID", ncol=2, scales = "free")+
+    scale_y_continuous(limits = c(0,70), n.breaks = 10)+
+    ylab("Milk Yield (kg/d)")+
+    xlab("Days in milk (DIM)")+
+    labs(colour = 'DIM Threshold')
+  
+  if(plot_table){
+    table_to_plot <- 
+      mean_params_ind %>% 
+      mutate(ID = factor(ID, ordered=TRUE,  levels = as_factor(IDs))) %>% 
+      select(ID,DIM_thresh, a, b, b0, c) %>% 
+      mutate(across(where(is.numeric), ~round(.x,3))) %>% 
+      mutate(across(a, ~round(.x,1))) %>%  
+      group_by(ID) %>%
+      nest() %>%  #nest table to col called data to plot within each facet using geom_table
+      mutate(x = 4, y = 110)
+    
+    p <- p +
+      scale_y_continuous(limits = c(0,110), n.breaks = 11)+
+     geom_table(aes(x = x, y = y, label = data), data = table_to_plot,size = 2)+
+      NULL
+      
+  } 
+  
+  return(p)
+  
+}
+```
+
+### Example bad plots
+
+Plot worst fits from 30 DIM for lacs over 400 DIM
+
+```{r}
+# filter out some IDs to plot
+longer_lacs <- 
+  i_fitted_MY_all %>% 
+  group_by(ID) %>% 
+  mutate(maxDIM = max(DIM)) %>% 
+  filter(DIM_thresh == 30 & maxDIM >= 400) %>% pull(ID) %>% unique()
+
+
+worst_fits2 <- i_combined_fit_stats %>% filter(ID %in% longer_lacs & DIM_thresh %in% c(30) ) %>% group_by(DIM_thresh) %>% slice_max(order_by = MAE, n = 4)
+
+worst_fits_ID2 <- worst_fits2 %>% pull(ID) %>% unique()
+```
+
+```{r fig.width=10}
+p_example_problems <- 
+  f_plot_sectional(
+    worst_fits_ID2,
+    plot_title = ifelse(is_constrained, "b)", "a)"), 
+    plot_table = TRUE) 
+
+p_example_problems
+```
+
+
+# Mean Fitted Plot
+
+```{r fig.width = 8}
+mean_fits_per_threshold <-
+  i_fitted_MY_all %>% 
+  group_by(DIM_thresh, DIM) %>%
+  summarise(mean_predicted_my = mean(fitted_MY),
+            sd_predicted_my = sd(fitted_MY),
+            mean_observed_my = mean(my, na.rm=TRUE))
+
+p_mean_fitted_sectional <- 
+  mean_fits_per_threshold %>% 
+  ggplot()+
+  geom_point(aes(x=DIM, y = mean_observed_my, colour = 'observed' ), alpha=0.2, size = 1.5)+
+  geom_point(aes(x = DIM, y = mean_predicted_my, colour = DIM_thresh), size=1.5, alpha=0.7)+
+  ggpubr::theme_classic2()+
+  scale_colour_manual( values = c(viridis::turbo(8, begin = 0.15, end = 0.85), "#000000"), #use viridis colours + black at end
+                       breaks = c(30,60,90,120,150,200, 250, 300,'observed'))+ # re-order legend
+  scale_y_continuous(n.breaks = 10, limits = c(NA,60)) + 
+  scale_x_continuous(breaks = c(0,30,60,90,120,150,200, 250, 300), 
+                     limits = c(NA, 320)
+                     )+
+  geom_vline(aes(xintercept=305), colour = 'red', linetype = 'dashed', linewidth=1.2)+
+  geom_label(aes(x = 305, y = 50, label = '305 DIM', fontface = 'bold'), 
+             colour = 'red', label.size = 1, size = 14/.pt, 
+             data = ~head(.x, 1))+ 
+  ylab("Milk Yield (kg)")+
+  xlab("Days in milk (DIM)")+
+  labs(colour = 'DIM Threshold')+
+  theme(text = element_text(size=16))+
+  ggtitle(ifelse(is_constrained, "b)", "a)"))
+
+
+p_mean_fitted_sectional  
+```
+
+```{r eval = FALSE}
+ggsave(filename = paste0(
+  ifelse(is_constrained, "CONSTRAINED_", "DEFAULT_"),
+  "fitted_sectional_fits_", 
+  format(Sys.time(), "%Y%m%d_%H%M") ,
+  ".png"),
+  path = "./Outputs/Forecasts/",
+  plot = p_mean_fitted_sectional,
+  dpi = 300,
+  width=10,
+  height=5)
+
+
+# Save as RDS to allow re-importing ggplot to combine the constrained and default later for publication
+saveRDS(
+  p_mean_fitted_sectional,
+  file = paste0("./Outputs/Forecasts/",
+                ifelse(is_constrained, "CONSTRAINED_", "DEFAULT_"),
+                "fitted_sectional_fits_", 
+                format(Sys.time(), "%Y%m%d_%H%M") ,
+                ".rds")
+  )
+```
+
+# Forecasted 305 d Model Error
+Calculate MY at d 305 MY goodness-of-fit
+```{r}
+MY_305d_GOF <-  
+  i_fitted_305d_MY %>% 
+  mutate(DIM_thresh = factor(DIM_thresh, 
+                             levels = as.character(c(30, 60, 90, 120, 150, 200, 250, 300)))) %>% 
+  group_by(DIM_thresh) %>% 
+  summarise(temp = f_goodness_of_fit(mean_305d_MY,mean_fitted_305d_MY, n_params = 4) ) %>% 
+  unnest(temp) %>% 
+  mutate(log10_RMSPE = log10(RMSPE),
+         across(where(is.numeric), ~signif(.x,3))) 
+  
+
+MY_305d_GOF
+```
+
+## Format
+
+```{r}
+MY_305d_GOF_formatted <-
+  MY_305d_GOF %>% 
+  select(DIM_thresh, RMSPE, MAE, CCC, Cb, r) %>% 
+  pivot_longer(cols = where(is.double)) %>% 
+  arrange(DIM_thresh) %>% 
+  pivot_wider(names_from = DIM_thresh, values_from=value)
+
+MY_305d_GOF_formatted
+```
+
+# Violin plot - 305d MY predictions
+
+```{r}
+
+# get actual values to row bind to df for plotting, so that it can be on same x axis easily
+df_actual_305d <- 
+  i_fitted_305d_MY %>% 
+  filter(DIM_thresh == "30") %>% #need just 1 set of this long data
+  mutate(DIM_thresh = "observed",
+         mean_fitted_305d_MY = mean_305d_MY) 
+
+
+violin_305d <- 
+  i_fitted_305d_MY %>% 
+  bind_rows(df_actual_305d) %>% 
+  mutate(pred_vs_actual = case_when(DIM_thresh == 'observed' ~ 'observed', TRUE ~ 'predicted')) %>% 
+  mutate(DIM_thresh = factor(DIM_thresh, 
+                             levels = as.character(c(30, 60, 90, 120, 150, 200, 250, 300, 'observed')))) %>% 
+  ggplot(aes(x = DIM_thresh, y = mean_fitted_305d_MY, color = pred_vs_actual))+
+  geom_violin(size = 0.7)+
+  geom_jitter(width = 0.2, alpha=0.25)+
+  viridis::scale_colour_viridis(discrete = TRUE, option = "H", begin = 0.15, end = 0.85)+
+  scale_y_continuous(breaks = seq(0,110,10))+
+  coord_cartesian(ylim = c(0,110))+
+  ggpubr::theme_classic2()+
+  theme(legend.position = 'none',
+        text = element_text(size=16))+
+  labs(x = 'DIM Threshold', y = 'Milk Yield at d 305 (kg)',
+       title = ifelse(is_constrained, "b)", "a)"))
+
+
+violin_305d
+```
+
+```{r}
+violin_plot_out_of_bounds <- 
+  i_fitted_305d_MY %>% 
+  filter(mean_fitted_305d_MY > 110) %>% 
+  ungroup() %>% 
+  summarise(
+    n = n(),
+    min = min(mean_fitted_305d_MY),
+    max = max(mean_fitted_305d_MY)
+  ) %>% 
+  mutate(is_constrained = is_constrained)
+
+violin_plot_out_of_bounds
+```
+
+```{r eval = FALSE}
+ggsave(filename = paste0(
+  ifelse(is_constrained, "CONSTRAINED_", "DEFAULT_"),
+  "violin_plot_305d_sectional_", 
+  format(Sys.time(), "%Y%m%d_%H%M") ,
+  ".png"),
+  path = "./Outputs/Forecasts/",
+  plot = violin_305d,
+  dpi = 300,
+  width=9,
+  height=5)
+
+
+# Save as RDS to allow re-importing ggplot to combine the constrained and default later for publication
+saveRDS(
+  violin_305d,
+  file = paste0("./Outputs/Forecasts/",
+                ifelse(is_constrained, "CONSTRAINED_", "DEFAULT_"),
+                "violin_plot_305d_sectional_", 
+                format(Sys.time(), "%Y%m%d_%H%M") ,
+                ".rds")
+  )
+```
+
+Count 0's in low DIM sectional fits:
+
+```{r}
+n_0kg_305d <- 
+i_fitted_305d_MY %>% 
+  mutate(DIM_thresh = factor(DIM_thresh, 
+                             levels = as.character(c(30, 60, 90, 120, 150, 200, 250, 300)))) %>% 
+  mutate(pred_is_0 = case_when(mean_fitted_305d_MY <1 ~ TRUE,
+                               TRUE ~ FALSE)) %>% 
+  group_by(DIM_thresh, pred_is_0) %>% 
+  count() %>% 
+  group_by(DIM_thresh) %>% 
+  mutate(n_perc = round(n/sum(n)*100,0)) 
+
+n_0kg_305d
+  
+```
+
+
+# P values
+
+## summary
+
+```{r}
+# with SE
+P_summary_with_SD <-
+  P_values_wide %>% 
+  group_by(DIM_thresh) %>% 
+  summarise(across(where(is.double), 
+                   list(mean= ~mean(.x, na.rm=TRUE),SD=~sd(.x, na.rm=TRUE)), 
+                   .names = '{.col}_{.fn}')) %>% 
+  mutate(across(contains('mean'), ~signif(.x,2)),
+         across(contains("SD"), ~signif(.x,3)))
+
+P_summary_with_SD
+```
+
+
+## Thresholds and accuracy
+
+Example of how accuracy is classified:
+
+| X_305 (threshold) | Observed MY | P \>= 0.5 | Obs \>= X_305 | is correct? |
+|-------------------|-------------|-----------|---------------|-------------|
+| 15                | 16          | TRUE      | TRUE          | correct     |
+| 15                | 16          | FALSE     | TRUE          | incorrect   |
+| 15                | 14          | TRUE      | FALSE         | incorrect   |
+| 15                | 14          | FALSE     | FALSE         | correct     |
+
+Therefore, accuracy =  number of rows where correct / total number of rows (364) * 100
+[for each threshold and probability ]
+
+```{r}
+P_values_classified <- 
+P_values_full %>% 
+  filter(X_305 %in% c(15,20,25) & DIM_thresh %in% c(90,120,200,300)) %>% 
+  select(-RMSPE_adj, -n,-t_stat) %>% 
+  ungroup() %>% 
+  mutate(observed_GE_target = mean_305d_MY >= X_305,
+         P_G_0.5 = P > 0.5,
+         accur_0.5 = observed_GE_target == P_G_0.5,
+         P_G_0.75 = P > 0.75,
+         accur_0.75 = observed_GE_target == P_G_0.75,
+         P_G_0.95 = P > 0.95,
+         accur_0.95 = observed_GE_target == P_G_0.95) 
+
+
+P_summarised_accuracy <- 
+  P_values_classified %>% 
+  group_by(DIM_thresh, X_305) %>% 
+  summarise(across(where(is.logical), sum), #sum on logical = count(TRUE)
+            n=n()) %>% 
+  mutate(
+    across(starts_with(c('accur_','P_G_','observed_GE_target')), ~ .x / n *100, .names = '{.col}_perc'),
+       ) %>% 
+  select(DIM_thresh, X_305, contains('observed_GE_target'), n, contains('0.5'), contains('0.75'), contains('0.95'))
+
+# format with numbers for obsered/probability rows
+P_summarised_accuracy_long_perc <- 
+  P_summarised_accuracy %>% 
+  select(DIM_thresh, X_305, contains('_perc')) %>%
+  pivot_longer(cols = observed_GE_target_perc:last_col()) %>% 
+  ### sort columsn to match output desired:
+  mutate(
+    sort_col = case_when(str_detect(name, "observed") ~ 0,
+                         str_detect(name, "accur") ~ str_split(name, "_", simplify=TRUE)[,2] %>% as.numeric(),
+                         str_detect(name, "P_G") ~ str_split(name, "_", simplify=TRUE)[,3] %>% as.numeric()-0.05)
+  ) %>% 
+  arrange(DIM_thresh, X_305, sort_col) %>% 
+  select(-sort_col) %>% 
+  # pivot wider:
+  pivot_wider(names_from = DIM_thresh,
+              values_from = value) %>% 
+  mutate(across(where(is.double), ~signif(.x,3))) 
+  
+# format all as percentages
+P_summarised_accuracy_long <- 
+  P_summarised_accuracy %>% 
+  select(-n, -accur_0.5, -accur_0.75, -accur_0.95, - P_G_0.5_perc, -P_G_0.75_perc,  P_G_0.95_perc, -observed_GE_target_perc) %>% 
+  pivot_longer(cols = observed_GE_target:last_col()) %>% 
+  pivot_wider(names_from = DIM_thresh,
+              values_from = value) %>% 
+  mutate(across(where(is.double), ~signif(.x,3))) 
+
+P_summarised_accuracy_long_perc 
+P_summarised_accuracy_long
+  
+
+```
+
+
+# Output tables
+
+```{r}
+tables_out_list <- 
+  list(
+    params_raw = summarised_params,
+    params_formatted = summarised_params_formatted,
+    fit_stats_raw = summarised_fit_stats,
+    fit_stats_formatted = fit_stats_formatted,
+    GOF_305d_all = MY_305d_GOF,
+    GOF_305d_formatted = MY_305d_GOF_formatted,
+    n_0kg_305d = n_0kg_305d,
+    P_summary_with_SD = P_summary_with_SD,
+    P_raw_classified = P_values_classified,
+    P_thresh_summarised = P_summarised_accuracy,
+    P_thresh_formatted = P_summarised_accuracy_long,
+    P_thresh_formatted_perc = P_summarised_accuracy_long_perc,
+    violin_plot_out_of_bounds = violin_plot_out_of_bounds
+     )
+
+# export
+openxlsx::write.xlsx(tables_out_list,
+                     file = paste0(
+                       ifelse(is_constrained,
+                              "./Outputs/CONSTRAINED_iterated_model_summary_tables ",
+                              "./Outputs/DEFAULT_iterated_model_summary_tables "),
+                                   format(Sys.time(), "%Y%m%d_%H%M") ,
+                                   ".xlsx"),
+                     colWidths = "auto")
+
+# round all numbers to 2 significant figures
+# tables_out_list2 <-
+#   tables_out_list %>%
+#   map(~.x %>% mutate(across(where(is.numeric), ~signif(.x, 2))))
+
+```

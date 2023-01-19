@@ -1,0 +1,287 @@
+---
+title: "4a. Prepare data for iterative fitting"
+author: 'David Innes'
+output: 
+  html_notebook: 
+    toc: yes
+    code_folding: show
+editor_options: 
+  chunk_output_type: inline
+--- 
+
+
+Prepare data by removing lactations that did not converge with full dataset.
+
+```{r setup, echo=TRUE, results='hide'}
+library(tidyverse)
+library(patchwork)
+
+source("./functions/f_descriptive_stats.R")
+```
+
+# Import data
+```{r}
+cleaned_data <- 
+  readRDS("./Outputs/cleaned_data_out.rds") %>% 
+  ungroup() %>% 
+  select(Cow, Parity, ID, DIM, my, maxDIM)
+
+
+combined_fit_info <- readRDS("./Outputs/combined_fit_info.rds")
+
+combined_fit_stats <- readRDS("./Outputs/combined_fit_stats.rds") %>%  ungroup() 
+
+combined_params <-  readRDS("./Outputs/combined_params.rds") %>% ungroup() 
+
+```
+
+## Remove non-converged 
+Re-calculates the descriptive stats for this dataset
+```{r}
+# remove non-converged and only Dijkstra model
+converged_IDs <- 
+  combined_fit_info  %>% 
+  filter(Model == "Dijkstra", isConv) %>% 
+  pull(ID)
+
+working_data <- 
+  cleaned_data %>% 
+  filter(ID %in% converged_IDs)
+
+
+new_descriptive_stats <- 
+  f_descriptive_stats(cleaned_data_in = working_data) 
+
+#print(paste("Dimensions converged-only dataset: ", dim(working_data)))
+new_descriptive_stats
+```
+
+
+# Output descriptive stats table
+```{r eval=FALSE}
+data.table::fwrite(new_descriptive_stats, 
+                   file = paste0("./Outputs/iterated_descritive_stats_filtered_data ",
+                                 format(Sys.time(), "%Y%m%d_%H%M"),
+                                 ".csv"))
+```
+
+# Export filtered data
+```{r eval=FALSE}
+saveRDS(working_data, paste0("./Outputs/filtered_cleaned_data",
+                             format(Sys.time(), "%Y%m%d_%H%M"),
+                             ".rds"))
+```
+
+
+# Calculate SD of b, b0 and c parameter
+To set bounds on the c parameter for the sectional fits we need to use the previous fit data.
+This is only to define 'biologically meaningful' numbers and doesn't necessarily rely on a full analysis prior.
+
+show means of all (converged and non-converged):
+```{r}
+combined_params_conv <- 
+combined_fit_info %>% 
+  filter(Model == "Dijkstra") %>% 
+  select(ID, isConv) %>% 
+  left_join(
+    combined_params %>% 
+      filter(Model == "Dijkstra") 
+  ) 
+
+ 
+combined_params_conv %>% 
+  summarise(across(c(b,b0,c), list(mean = mean, sd = sd), .names = "{.col}_{.fn}")) 
+
+  
+```
+
+Show means of just converged == TRUE. 
+```{r}
+param_bounds <- 
+combined_params_conv %>% 
+  group_by(isConv) %>% 
+  summarise(across(c(b,b0,c), list(mean = mean, sd = sd), .names = "{.col}_{.fn}")) %>% 
+  filter(isConv == TRUE) 
+param_bounds
+
+```
+
+
+## b Param
+### Plot
+```{r}
+mean_b <- pull(param_bounds, b_mean)
+sd_b <- pull(param_bounds, b_sd)
+
+(p_b <- 
+combined_params_conv %>% 
+  ggplot(aes(x = b, fill = isConv))+
+  geom_histogram(binwidth = 0.01)+
+  scale_fill_viridis_d(option = "D", begin = 0.15, end = 0.85)+
+  scale_x_continuous(n.breaks = 10)+
+  geom_vline(aes(xintercept=mean_b), colour = 'black')+
+  geom_vline(aes(xintercept=mean_b + sd_b), colour = 'black', linetype = 'dashed' )+
+  geom_vline(aes(xintercept=mean_b - sd_b), colour = 'black', linetype = 'dashed' )+
+  labs( 
+    title = "a)",
+    fill = "Converged?",
+    )+
+  ggpubr::theme_classic2() +
+  NULL
+)
+```
+
+
+## b0 Param
+### Plot
+```{r}
+mean_b0 <- pull(param_bounds, b0_mean)
+sd_b0 <- pull(param_bounds, b0_sd)
+
+(
+p_b0 <- 
+combined_params_conv %>% 
+  ggplot(aes(x = b0,fill = isConv))+
+  geom_histogram(binwidth = 0.01)+
+  scale_fill_viridis_d(option = "D", begin = 0.15, end = 0.85)+
+  scale_x_continuous(n.breaks = 10)+
+  geom_vline(aes(xintercept=mean_b0), colour = 'black')+
+  geom_vline(aes(xintercept=mean_b0 + sd_b0), colour = 'black', linetype = 'dashed' )+
+  geom_vline(aes(xintercept=mean_b0 - sd_b0), colour = 'black', linetype = 'dashed' )+
+  labs(
+    title = "b)",
+    fill = "Converged?",
+    )+
+  ggpubr::theme_classic2() +
+  NULL
+)
+
+```
+
+
+
+
+## c Param
+
+### Plot
+```{r}
+mean_c <- pull(param_bounds, c_mean)
+sd_c <- pull(param_bounds, c_sd)
+
+p_c <- 
+  combined_params_conv %>% 
+  ggplot(aes(x = c,  fill = isConv))+
+  geom_histogram(binwidth = 0.001)+
+  scale_fill_viridis_d(option = "D", begin = 0.15, end = 0.85)+
+  scale_x_continuous(n.breaks = 10)+
+  scale_y_continuous(trans = 'pseudo_log')+
+  labs(
+    title = "c)",
+    fill = "Converged?",
+    y = 'count (log scale)',
+    )+
+  ggpubr::theme_classic2() +
+  NULL
+
+p_c 
+
+
+```
+
+
+
+### Refine c further
+Visually, it looks like the large outliers are pulling the mean away from the actual 'normal curve' 
+```{r}
+
+new_c_bounds <- 
+combined_params_conv %>% 
+  filter(c <= 0.006) %>% # manually selected threshold
+  group_by(isConv) %>% 
+  summarise(across(c(c), list(mean = mean, sd = sd), .names = "{.col}_{.fn}")) %>% 
+  filter(isConv == TRUE) 
+
+
+
+mean_c <- pull(new_c_bounds, c_mean)
+sd_c <- pull(new_c_bounds, c_sd)
+
+p_c2 <- 
+combined_params_conv %>% 
+  filter(c < 0.02) %>% 
+  ggplot(aes(x = c, fill = isConv))+
+  geom_histogram(binwidth = 0.0001)+
+    scale_fill_viridis_d(option = "D", begin = 0.15, end = 0.85)+
+  scale_x_continuous(n.breaks = 10)+
+  geom_vline(aes(xintercept=mean_c), colour = 'black')+
+  geom_vline(aes(xintercept=mean_c + sd_c * 1.5), colour = 'black', linetype = 'dashed' )+
+  geom_vline(aes(xintercept=mean_c - sd_c * 1.5), colour = 'black', linetype = 'dashed' )+
+  
+  geom_vline(aes(xintercept=0.006), colour = 'gold4', linetype=6, linewidth = 1)+
+  labs(
+    title = "d)",
+    fill = "Converged?",
+  )+
+  ggpubr::theme_classic2() +
+  NULL
+
+p_c2
+
+```
+
+# Join plots
+
+```{r fig.width = 10}
+(p_combined_publish <- (p_b + p_b0) / (p_c + p_c2) )
+```
+
+
+```{r eval=FALSE}
+# change to .tiff for high-resolution for publication
+ggsave(filename = "combined_histograms_Dijkstra_params.png", 
+       plot = p_combined_publish, 
+       path = "./Outputs/",
+       dpi = 600,
+       width = 10,
+       scale = 1.2)
+```
+
+
+
+## final bounds
+The adjustments for 0 values is done automatically within `f_iterate_fitting.R`
+```{r}
+# b
+lower_bound_b <- mean_b - (sd_b * 1)
+upper_bound_b <-  mean_b + (sd_b * 1)
+# lower_bound_b is lower than 0, which is impossible. Therefore, set as 0.
+print("b param - lower bound: 0 (can't be neg; add 0e-08 as can't be actually 0 either)")
+print(paste("b param - upper bound: ", round(upper_bound_b, 5)  ))
+
+
+#b0
+upper_bound_b0 <-  mean_b0 + (sd_b0 * 1)
+lower_bound_b0 <- mean_b0 - (sd_b0 * 1)
+print(paste("b0 param - lower bound: ", round(lower_bound_b0,5)))
+print(paste("b0 param - upper bound: ", round(upper_bound_b0, 5)  ))
+
+# c
+upper_bound_c <-  mean_c + (sd_c * 1.5)
+lower_bound_c <- mean_c - (sd_c * 1.5)
+
+
+# lower_bound_c is lower than 0, which is impossible. Therefore, set as 0.
+if(lower_bound_c > 0){
+  print(paste("c param - lower bound: ", round(lower_bound_c, 5) ))
+} else print("c param - lower bound: 0 (can't be neg; add 0e-08 as can't be actually 0 either)")
+
+print(paste("c param - upper bound: ", round(upper_bound_c, 5)  ))
+```
+
+
+
+
+
+
+
+
