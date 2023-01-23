@@ -28,8 +28,34 @@ The code in it's current form are provided to ensure that reproducibility of our
 
 -   `my` - milk yield; kg
 
+If you are not familiar with these types of code, the easiest way to get started is to copy this entire repository to your computer and open the .Rmd files in numerical order within RStudio. You will need to install the required packages as you go.
+
 Some of the initial cleaning steps were developed to fix issues specific to our dataset, partially because we only had access to the 5 columns of data above, and not any of the management data or dates that would otherwise be available on-farm.
 
-The expected output from the provided data set can be viewed at: <https://cnm-university-of-guelph.github.io/forecasting-extended-lactation/> (these are the `.html` files located in the `docs/` folder, which are copies of the `.html` files from each associated `.Rmd` file in the main directory).
+The expected output from running the `.Rmd` files can be viewed at: <https://cnm-university-of-guelph.github.io/forecasting-extended-lactation/> (these are the `.html` files located in the `docs/` folder, which are copies of the `.html` files from each associated `.Rmd` file in the main directory). In addition, all expected output data is saved in the `Outputs/` folder.
 
 Please contact David Innes (innesd\@uoguelph.ca) or the other authors on our manuscript if you are interested in further explanations or assistance. Also, feel free to file an issue on github if you encounter a bug or have feature requests.
+
+**Packages used:**
+
+| Package       | Version |
+|---------------|---------|
+| broom         | 1.0.1   |  
+| car           | 3.1-1   |          
+| data.table    | 1.14.6  |  
+| ggpp          | 0.5.0   |         
+| ggpubr        | 0.5.0   |       
+| multidplyr    | 0.1.2   |   
+| nls.multstart | 1.2.0   |
+| openxlsx      | 4.2.5.1 |   
+| patchwork     | 1.1.2   |    
+| purrr         | 0.3.5   |        
+| rlang         | 1.0.6   |        
+| rmarkdown     | 2.18    |     
+| rstatix       | 0.7.1   |      
+| slider        | 0.3.0   |       
+| tidyverse     | 1.3.2   |    
+| viridis       | 0.6.2   |      
+| zoo           | 1.8-11  |         
+| nlme          | 3.1-160 |       
+| parallel      | 4.2.2   | 
