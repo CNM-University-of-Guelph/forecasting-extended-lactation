@@ -38,3 +38,4 @@ vignettes/*.pdf
 # R Environment Variables
 .Renviron
 .Rproj.user
+copy_html_files_to_docs.R

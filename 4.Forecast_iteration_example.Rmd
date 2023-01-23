@@ -34,7 +34,7 @@ source("./functions/f_forecast_P.R")
 ```
 
 # Execute
-This is slow on laptop. Output files are automatically saved to `Outputs/`. Looks for `filtered_cleaned_output____.rds` in this folder as well.
+This can also be slow, even with model fitting split across all available cores (-1). Output files are automatically saved to `Outputs/`. Looks for `filtered_cleaned_output____.rds` in this folder as well.
 Keep an eye on console for user input.
 
 ```{r}
