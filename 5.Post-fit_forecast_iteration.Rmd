@@ -156,7 +156,7 @@ fit_stats_formatted <-
   mutate(DIM_thresh = factor(DIM_thresh, 
                              levels = as.character(c(30, 60, 90, 120, 150, 200, 250, 300)))) %>% 
   
-  select(DIM_thresh, starts_with(c("R2","MAE", "RMSPE", "CCC","r_","Cb", "DW"))) %>% 
+  select(DIM_thresh, starts_with(c("R2","MAE", "RMSPE", "RMSE","CCC","r_","Cb", "DW"))) %>% 
   f_format_pub(DIM_thresh) %>% 
   mutate(across(where(is.double),~signif(.x,3)))
 
@@ -239,7 +239,10 @@ longer_lacs <-
   filter(DIM_thresh == 30 & maxDIM >= 400) %>% pull(ID) %>% unique()
 
 
-worst_fits2 <- i_combined_fit_stats %>% filter(ID %in% longer_lacs & DIM_thresh %in% c(30) ) %>% group_by(DIM_thresh) %>% slice_max(order_by = MAE, n = 4)
+worst_fits2 <- i_combined_fit_stats %>% 
+  filter(ID %in% longer_lacs & DIM_thresh %in% c(30) ) %>% 
+  group_by(DIM_thresh) %>% 
+  slice_max(order_by = MAE, n = 4)
 
 worst_fits_ID2 <- worst_fits2 %>% pull(ID) %>% unique()
 ```
@@ -337,7 +340,7 @@ MY_305d_GOF
 ```{r}
 MY_305d_GOF_formatted <-
   MY_305d_GOF %>% 
-  select(DIM_thresh, RMSPE, MAE, CCC, Cb, r) %>% 
+  select(DIM_thresh, obs_mean, pred_mean, RMSPE, RMSE_perc, MAE, MAE_perc, CCC, Cb, r) %>% 
   pivot_longer(cols = where(is.double)) %>% 
   arrange(DIM_thresh) %>% 
   pivot_wider(names_from = DIM_thresh, values_from=value)
@@ -348,6 +351,10 @@ MY_305d_GOF_formatted
 # Violin plot - 305d MY predictions
 
 ```{r}
+
+
+# set y-axis maximum value
+ymaxlim <- 120
 
 # get actual values to row bind to df for plotting, so that it can be on same x axis easily
 df_actual_305d <- 
@@ -361,28 +368,31 @@ violin_305d <-
   i_fitted_305d_MY %>% 
   bind_rows(df_actual_305d) %>% 
   mutate(pred_vs_actual = case_when(DIM_thresh == 'observed' ~ 'observed', TRUE ~ 'predicted')) %>% 
-  mutate(DIM_thresh = factor(DIM_thresh, 
+  #filter(mean_fitted_305d_MY < 100) %>% 
+    mutate(DIM_thresh = factor(DIM_thresh, 
                              levels = as.character(c(30, 60, 90, 120, 150, 200, 250, 300, 'observed')))) %>% 
   ggplot(aes(x = DIM_thresh, y = mean_fitted_305d_MY, color = pred_vs_actual))+
   geom_violin(size = 0.7)+
   geom_jitter(width = 0.2, alpha=0.25)+
-  viridis::scale_colour_viridis(discrete = TRUE, option = "H", begin = 0.15, end = 0.85)+
-  scale_y_continuous(breaks = seq(0,110,10))+
-  coord_cartesian(ylim = c(0,110))+
+  #geom_violin(aes(x = 'actual', y = mean_305d_MY))+
+  #ylim(c(NA, 75))+
+    viridis::scale_colour_viridis(discrete = TRUE, option = "H", begin = 0.15, end = 0.85)+
+  scale_y_continuous(breaks = seq(0,ymaxlim,10))+
+  coord_cartesian(ylim = c(-5,ymaxlim), expand = FALSE)+
   ggpubr::theme_classic2()+
   theme(legend.position = 'none',
         text = element_text(size=16))+
-  labs(x = 'DIM Threshold', y = 'Milk Yield at d 305 (kg)',
+  labs(x = 'DIM Threshold', y = 'Milk Yield at d 305 (kg/d)',
        title = ifelse(is_constrained, "b)", "a)"))
 
 
-violin_305d
+violin_305d 
 ```
 
 ```{r}
 violin_plot_out_of_bounds <- 
   i_fitted_305d_MY %>% 
-  filter(mean_fitted_305d_MY > 110) %>% 
+  filter(mean_fitted_305d_MY > ymaxlim) %>% 
   ungroup() %>% 
   summarise(
     n = n(),
@@ -470,7 +480,7 @@ Example of how accuracy is classified:
 Therefore, accuracy =  number of rows where correct / total number of rows (364) * 100
 [for each threshold and probability ]
 
-```{r}
+```{r warning=FALSE, message=FALSE}
 P_values_classified <- 
 P_values_full %>% 
   filter(X_305 %in% c(15,20,25) & DIM_thresh %in% c(90,120,200,300)) %>% 

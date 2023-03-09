@@ -57,7 +57,7 @@ list_output <- f_clean_lac_data(workingfile, generate_plots = TRUE)
 ```
 
 ## Print log
-Because this is a synthetic dataset, many errors are not detected here. 
+Because this is a synthetic dataset, various errors are not detected here. 
 ```{r}
 list_output$log$Step1_NA_removed
 
@@ -88,7 +88,7 @@ list_output$plots$list_outlier_detection_plots$`1705_3`
 ```
 
 ## Save plots
-This can take a while, and is better executed on a larger computer.
+This can take a while, and is better executed on a powerful computer.
 ```{r eval=FALSE, include=TRUE}
 # Only works if generate_plots = TRUE
 
@@ -98,14 +98,13 @@ f_plot <- function(.x, .y){
   name_in <- .y
   
   p <- ggsave(filename = paste0("outlier_plot_",name_in,".png"),
-               path = "./Plots/Outlier_Detection/", 
-              #path = "./R_lac/Plots/Gap_Detection/",
-                plot =  plot_in,
-                dpi = 150,
-                width=10,
-               height=7)
-  }
-  
+              path = "./Plots/Outlier_Detection/", 
+              plot =  plot_in,
+              dpi = 150,
+              width=10,
+              height=7)
+}
+
 list_to_plot <- list_output$plots$list_outlier_detection_plots[1:3]
 #list_to_plot <- list_output$plots$list_gap_classification_plots[1:3]
 

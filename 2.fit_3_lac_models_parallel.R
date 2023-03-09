@@ -14,7 +14,7 @@
 #   4. combined fit stats
 # Also saves plots
 
-#setwd("./R_lac/")
+# note: setwd() may be required if sourcing from command line.
 
 print("START")
 print(Sys.time())
@@ -24,7 +24,7 @@ print(Sys.time())
 ###########################
 
 suppressPackageStartupMessages(library(tidyverse, warn.conflicts = FALSE))
-library(nlme)
+suppressPackageStartupMessages(library(nlme, warn.conflicts = FALSE))
 library(nls.multstart)
 library(broom)
 library(purrr)
@@ -83,8 +83,9 @@ print("Fitting DIJKSTRA...")
 print(Sys.time())
 
 
-# run nls_multstart with shotgun approach
+# run nls_multstart
 # this function uses the marquardt method
+# lower and upper are bounds on fitted parameters, whereas start_ give estimated starting values for algorithm
 
 # fit over each set of groupings
 # Uses a nested dataframe with map, which iterates through each set of data and returns it in a df.
@@ -249,6 +250,8 @@ rm(fits_wood, PY_TP_wood,t_max_MY_wood )
 
 print("Fitting WOOD...END")
 print(Sys.time())
+
+
 ###########################
 # Wilmink
 ###########################

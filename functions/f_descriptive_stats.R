@@ -3,7 +3,8 @@
 
 # Input:
 # - cleaned_data_in: output from f_clean_lac_data
-
+# - total_MY_summary_in: output from f_clean_lac_data
+#  This is interpolated data for calculating total MY from 10 DIM to 305 DIM and MY at 305 d
 
 # OUTPUT:
 # - 1 df with 2 columns (Description, Value_new)
@@ -43,7 +44,6 @@ f_descriptive_stats <- function(cleaned_data_in){
   # Both input dataframes come from the output of the f_clean_lac_data()
 
   cleaned_data <- cleaned_data_in
- # total_MY_summary <- total_MY_summary_in
 
   ##########################
   # Step 1 - summarise data (max, min, n)
@@ -113,7 +113,6 @@ f_descriptive_stats <- function(cleaned_data_in){
 
   ##########################
   # Step 4 - Summarise records per lactation
-  #
   ##########################
 
   records_per_lac <-
@@ -139,10 +138,7 @@ f_descriptive_stats <- function(cleaned_data_in){
               'mode_maxDIM' = .Modes(maxDIM),
               "min_maxDIM" = min(maxDIM),
               'max_maxDIM' = max(maxDIM)) %>%
-    mutate(across(where(is.numeric), round, 0))
-
-  # Pull columns in summary table at end
-  #print(summarised_maxDIM)
+    mutate(across(where(is.numeric), ~round(.x, 0)))
 
 
   ##########################
@@ -160,10 +156,7 @@ f_descriptive_stats <- function(cleaned_data_in){
               'mode_d305MY' = .Modes(MY_305d) %>% median(), #for when multiple modes
               "min_d305MY" = min(MY_305d),
               'max_d305MY' = max(MY_305d)) %>%
-    mutate(across(where(is.numeric), round, 1))
-
-  # Pull columns in summary table at end
-  #print(summarised_d305MY)
+    mutate(across(where(is.numeric), ~round(.x, 1)))
 
 
   ##########################

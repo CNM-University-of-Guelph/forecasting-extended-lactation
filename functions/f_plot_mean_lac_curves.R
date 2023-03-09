@@ -2,15 +2,16 @@
 #
 # David Innes
 
+
 # INPUTS:
 #   - combined_preds_fitted_in = df. output from fit_3_lac_models().
 #       Contains columns: Model, DIM, .fitted, my, .resid and the column used in groups_by.
 #   - groups_by = name of column to group by for plot e.g. Parity_class or Lac_len_group
 #   - plot_n_colour = either: FALSE (no colour) or TRUE (for normal n) or
-#                        a string suitable for trans = e.g. 'log', 'log2', 'log10'
+#                        a string suitable for `trans =` e.g. 'log', 'log2', 'log10'
 #   - plot_residuals = bool
 
-# OUTPUT: a ggplot
+# OUTPUT: a plot
 
 f_plot_mean_lac_curves <- function(combined_preds_fitted_in,
                                   groups_by,
@@ -33,6 +34,7 @@ f_plot_mean_lac_curves <- function(combined_preds_fitted_in,
               mean_residual = mean(.resid, na.rm=TRUE),
               n = n())
 
+
   if(plot_residuals == FALSE){
 
     if (plot_n_colour == FALSE){
@@ -40,7 +42,7 @@ f_plot_mean_lac_curves <- function(combined_preds_fitted_in,
         mean_preds %>%
         ggplot()+
         geom_point(aes(x=DIM, y = mean_observed_my), alpha=0.25, size = 1.5)+
-        geom_line(aes(x = DIM, y = mean_predicted_my, colour = Model), linewidth=1, alpha=0.95)+
+        geom_line(aes(x = DIM, y = mean_predicted_my, colour = Model), linesize=1, alpha=0.95)+
         viridis::scale_colour_viridis(discrete=TRUE, option = "D", begin = 0.2, end = 0.9)
 
 
@@ -49,7 +51,7 @@ f_plot_mean_lac_curves <- function(combined_preds_fitted_in,
         mean_preds %>%
         ggplot()+
         geom_point(aes(x=DIM, y = mean_observed_my, colour = n), alpha=0.25, size = 1.5)+
-        geom_line(aes(x = DIM, y = mean_predicted_my), linewidth=1, alpha=0.95)+
+        geom_line(aes(x = DIM, y = mean_predicted_my), linesize=1, alpha=0.95)+
         viridis::scale_color_viridis(direction = -1, option = "H", labels = ~round(.,0), begin = 0.1)
 
 
@@ -59,7 +61,7 @@ f_plot_mean_lac_curves <- function(combined_preds_fitted_in,
         mean_preds %>%
         ggplot()+
         geom_point(aes(x=DIM, y = mean_observed_my, colour = n), alpha=0.25, size = 1.5)+
-        geom_line(aes(x = DIM, y = mean_predicted_my), linewidth=1, alpha=0.95)+
+        geom_line(aes(x = DIM, y = mean_predicted_my), linesize=1, alpha=0.95)+
         viridis::scale_color_viridis(direction = -1, option = "H", trans = plot_n_colour, labels = ~round(.,0), begin = 0.1)
 
     } else {
@@ -67,6 +69,7 @@ f_plot_mean_lac_curves <- function(combined_preds_fitted_in,
     }
 
     # add extra formatting and faceting
+
     p <- p +
       facet_grid(cols=vars( {{ groups_by }} ), rows=vars(Model))+
       ylab("Milk Yield (kg/d)")+

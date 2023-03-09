@@ -1,6 +1,7 @@
 # Function to run all pre-processing and data cleaning steps for analysis of lactation data
 # David Innes
 
+
 # INPUT:
 # - workingfile_in: a dataframe with at least these columns:
 #       1. Cow (cow's number identification)
@@ -93,7 +94,7 @@ f_clean_lac_data <-
         mutate(maxDIM = max(DIM),
                minDIM = min(DIM),
                n = n()) %>%
-        #use these columsn to filter dataframe
+        #use these columns to filter dataframe
         filter(maxDIM > 305 & n > 150 & minDIM < 10)
     }
 
@@ -114,11 +115,9 @@ f_clean_lac_data <-
 
     plots_list$n_per_DIM_postfilter <-
       workingfile_step3_out %>%
-      # filter(DIM <= 20) %>%
       group_by(DIM) %>%
       count() %>%
       ungroup() %>%
-      #mutate(n_perc = round(n/n_unique_lac*100,2)) %>%
       ggplot(aes(x = DIM, y=n))+
       geom_point()+
       geom_vline(aes(xintercept = 10), colour = 'red')+
@@ -136,7 +135,7 @@ f_clean_lac_data <-
     # Step 4 - Gap detection
     ##########################
     print("Step 4 - Gap detection")
-    # Ensure DIM are numbered sequentally first
+    # Ensure DIM are numbered sequentially first
     # Use lag() to calculate diff between rows
     # by group
 
@@ -187,7 +186,7 @@ f_clean_lac_data <-
     ##########################
     # 4a - filter out based on gaps
     #
-    # 1. remove full lactation where there is a break > 14 days and < 305 DIM (n = 12)
+    # 1. remove full lactation where there is a break > 14 days and < 305 DIM
     # 2. Remove trailing data that is after end of lactation:
     #
     #   - For each lactation, find row where lag_DIM > 14 days and DIM >= 305
@@ -200,7 +199,7 @@ f_clean_lac_data <-
     workingfile_step4a_out <-
       workingfile_step4_out %>%
       group_by(ID) %>%
-      mutate(DIM_filter = case_when(lag_DIM > 14 & DIM >= 305 ~ DIM)) %>%  #return DIM for filter (used later)
+      mutate(DIM_filter = if_else(lag_DIM > 14 & DIM >= 305, DIM, NA)) %>%  #return DIM for filter (used later)
       group_split() %>%
       map_dfr(.f = function(df){
         #1.
@@ -216,10 +215,10 @@ f_clean_lac_data <-
           # temp number to filter with
           .DIM_filter <- min(df$DIM_filter, na.rm = TRUE)
 
-          # add column with flag, add additional colum that will be used to count only rows removed by this particular part of the filter
+          # add column with flag, add additional column that will be used to count only rows removed by this particular part of the filter
           df <- df %>%
-            mutate(DIM_flag = case_when(DIM >= .DIM_filter ~ TRUE, TRUE ~ FALSE),
-                   DIM_flag_reporting = case_when(DIM >= .DIM_filter ~ TRUE, TRUE ~ FALSE))
+            mutate(DIM_flag = case_when(DIM >= .DIM_filter ~ TRUE, .default = FALSE),
+                   DIM_flag_reporting = case_when(DIM >= .DIM_filter ~ TRUE, .default = FALSE))
 
           return(df)
 
@@ -234,7 +233,6 @@ f_clean_lac_data <-
 
     if(generate_plots == TRUE){
       # Plot to check classifications
-      # WARNING: ~500 plots stored in this list
       plots_list$list_gap_classification_plots <-
         workingfile_step4a_out %>%
         group_by(ID) %>%
@@ -252,7 +250,7 @@ f_clean_lac_data <-
 
     # Count rows removed by DIM_flag
     log_list$"GAP-FILTER: n_rows_pre-gap-filter" <- nrow(workingfile_step4_out)
-    log_list$"GAP-FILTER: n_rows_removed >=305 DIM" <- workingfile_step4a_out %>% group_by(DIM_flag) %>% count()
+    log_list$"GAP-FILTER: n_rows_removed >=305 DIM" <- workingfile_step4a_out %>% group_by(DIM_flag_reporting) %>% count()
     log_list$"MID-Lac GAP-FILTER: n_rows_removed mid lac break > 14 d" <- workingfile_step4_out %>% filter(ID %in% mid_lac_break_ID) %>% nrow()
 
 

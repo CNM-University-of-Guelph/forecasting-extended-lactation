@@ -12,10 +12,9 @@ editor_options:
 
 This runs through generating:
 
-a) summary tables
+a) Summary tables
 b) Plots
-c) correlations
-d) t-tests
+c) t-tests
 
 All from the output of the fitting of the 3 lactation models. 
 
@@ -92,9 +91,10 @@ parity_fit_stats <-
 # summarise output for table in paper
 parity_fit_stats_formatted <-
   parity_fit_stats %>% 
-   select(Model, Parity_class, starts_with(c("R2","MAE", "RMSPE", "CCC", "r_","Cb", "DW"))) %>% 
-  mutate(across(where(is.double), ~round(.x,2))) %>% 
+  select(Model, Parity_class, starts_with(c("R2","MAE", "RMSPE", "RMSE", "CCC", "r_","Cb", "DW"))) %>% 
+  mutate(across(where(is.double), ~round(.x,2)  )) %>% 
   f_format_pub(groups_by=c(Model, Parity_class))
+
 
 
 parity_fit_stats_formatted
@@ -106,14 +106,13 @@ parity_fit_stats_formatted
 ### Summary
 ```{r message=FALSE}
 laclen_params_raw <- 
-  f_fitted_summary_tables(combined_params, groups_by = c(Model,Lac_len_group))
+  f_fitted_summary_tables(combined_params, groups_by = c(Model, Lac_len_group))
 
 ```
 
 
-### Formatted for pub
+### Formatted for publication
 ```{r}
-
 laclen_params_formatted <-
   f_format_pub(laclen_params_raw, c(Model,Lac_len_group))
 
@@ -131,8 +130,8 @@ laclen_fit_stats <-
 # summarise output for table in paper
 laclen_fit_stats_formatted <-
   laclen_fit_stats %>% 
-   select(Model, Lac_len_group, starts_with(c("R2","MAE", "RMSPE","CCC", "r_","Cb", "DW"))) %>% 
-  mutate(across(where(is.double), ~round(.x,2))) %>% 
+  select(Model, Lac_len_group, starts_with(c("R2","MAE", "RMSPE","RMSE","CCC", "r_","Cb", "DW"))) %>% 
+  mutate(across(where(is.double), ~round(.x,2)  )) %>% 
   f_format_pub(groups_by=c(Model, Lac_len_group))
 
 
@@ -205,7 +204,7 @@ f_plot_mean_lac_curves(combined_preds_fitted_in = combined_preds_fitted,
 
 
 ## combined residual plots for publication
-```{r fig.height = 8, fig.width = 6}
+```{r message=FALSE, fig.height = 8, fig.width = 6}
 # plot one of top of each other
 (p_resid_combined_publish <- p_resid_parity / p_resid_lacgroup)
 
@@ -239,7 +238,7 @@ ggsave(filename = paste0("residual_points_combined_",
 ## Observed with error
 plot observed points with error bars
 
-```{r}
+```{r message=FALSE}
 observed_means <- 
   combined_preds_fitted %>% 
   filter(Model == "Dijkstra") %>% 
@@ -295,54 +294,67 @@ ggsave(filename = paste0("p_observed_summary ",
 
 
 ### Get worst and best fits
-
+Ranked on mean of MAE (%) across 3 fits.
 ```{r}
-worst_fits <- combined_fit_stats %>% group_by(ID) %>% summarise(mean_MAE = mean(MAE, na.rm=TRUE)) %>%  slice_max(order_by = mean_MAE, n = 6) %>% arrange(desc(mean_MAE))
+worst_fits <- 
+  combined_fit_stats %>% 
+  group_by(ID) %>% 
+  summarise(mean_MAE = mean(MAE_perc, na.rm=TRUE)) %>%  
+  slice_max(order_by = mean_MAE, n = 6) %>% 
+  arrange(desc(mean_MAE))
 
 worst_fits_ID <- worst_fits %>% pull(ID) %>% unique()
 
-best_fits <- combined_fit_stats %>% group_by(ID) %>% summarise(mean_MAE = mean(MAE, na.rm=TRUE)) %>%  slice_min(order_by = mean_MAE, n = 6) %>% arrange(mean_MAE)
+
+best_fits <-
+  combined_fit_stats %>% 
+  group_by(ID) %>% 
+  summarise(mean_MAE = mean(MAE_perc, na.rm=TRUE)) %>%  
+  slice_min(order_by = mean_MAE, n = 6) %>% 
+  arrange(mean_MAE)
 
 best_fits_ID <- best_fits %>% pull(ID) %>% unique()
 ```
 
 
 #### 6 best fits 
-Average MAE
-
 ```{r fig.width = 10, message=FALSE}
-(p_best_fits_a <- 
-  f_plot_individual_three_models(
-    combined_fit_stats,
-    combined_preds_fitted, 
-    best_fits_ID, 
-    y_label_loc = 50,
-    "a)")
-)
+p_best_fits_a <- 
+  f_plot_individual_three_models_2_errors(
+  combined_fit_stats,
+  combined_preds_fitted,
+  error_rank = "MAE",
+  best_fits_ID, 
+  y_label_loc = 4,
+  ymax = 80,
+  "a)")+ coord_cartesian(ylim = c(-5, NA))
+
+p_best_fits_a
 
 ```
 
 
 #### 6 worst fits
-Using average MAE
-
 ```{r fig.width = 10, message = FALSE}
-(
+
 p_worst_fits_b <- 
-  f_plot_individual_three_models(
-    combined_fit_stats, 
-    combined_preds_fitted,
-    worst_fits_ID, 
-    y_label_loc = 8,
-    plot_title = "b)")
-)
+  f_plot_individual_three_models_2_errors(
+  combined_fit_stats, 
+  combined_preds_fitted,
+  error_rank = "MAE",
+  worst_fits_ID, 
+  y_label_loc = 40,
+  ymax = 60,
+  plot_title = "b)")+ coord_cartesian(ylim = c(-5, NA))
+
+p_worst_fits_b 
                      
 ```
 
 
 ### combined best/worst plots for publication
 ```{r message=FALSE}
-(p_best_worst_publish <- p_best_fits_a / p_worst_fits_b)
+p_best_worst_publish <- p_best_fits_a / p_worst_fits_b
 ```
 
 save:
@@ -369,32 +381,7 @@ ggsave(filename = paste0("p_ind_fits_best_worst_combined ",
 ```
 
 
-# c) Correlations
-```{r message=FALSE}
-working_subset <- 
-  left_join(
-  combined_fit_stats %>% select(ID, Parity, Parity_class, Model, RMSPE, MAE),
-  combined_params %>% select(ID, Parity, Model, Mp, Persistency)
-)
-
-
-cor_tables_GOF_Mp_Persistency <- 
-working_subset %>% 
-  group_by(Model) %>% 
-  summarise(cor_RMSPEvsMp = cor(RMSPE, Mp, use = 'complete.obs'),
-            cor_RMSPEvsPersist = cor(RMSPE, Persistency, use = 'complete.obs'),
-            cor_MAEvsMp = cor(MAE, Mp, use = 'complete.obs'),
-            cor_MAEvsPersist = cor(MAE, Persistency, use = 'complete.obs'))
-  
-cor_tables_GOF_Mp_Persistency
-```
-
-```{r}
-data.table::fwrite(cor_tables_GOF_Mp_Persistency, "./Outputs/cor_tables_GOF_Mp_Persistency.csv")
-```
-
-
-# d) t-tests
+# c) t-tests
 Run t test comparisons between mean values.
 Comparisons between parity or lactation length, within each model.
 Output tables to 1 excel file.
@@ -413,7 +400,7 @@ combined_params_long <-
   rename_at(vars(contains("Tp")), list(~str_replace(., "Tp", "Time_to_PY_d"))) %>% 
   select(-contains('maxDIM'), -contains('tmax'), -contains('t_max')) %>% 
   select(ID, Parity_class, Model, Lac_len_group, where(is.numeric)) %>% 
-    pivot_longer(cols = where(is.double),
+  pivot_longer(cols = where(is.double),
                values_to = 'value',
                names_to = 'variable')
 
@@ -425,7 +412,7 @@ combined_fits_long <-
   mutate(Parity_class = factor(Parity_class, levels = c("Primiparous", "Multiparous")),
          Model = factor(Model, levels = c('Wood', 'Wilmink','Dijkstra'))) %>% 
   select(ID, Parity_class, Model, Lac_len_group, where(is.numeric)) %>% 
-    pivot_longer(cols = where(is.double),
+  pivot_longer(cols = where(is.double),
                values_to = 'value',
                names_to = 'variable')
 

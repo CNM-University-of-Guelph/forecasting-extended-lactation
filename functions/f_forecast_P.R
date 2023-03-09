@@ -3,6 +3,7 @@
 #
 # David Innes
 #
+#
 # Uses the t statistic which in this case is calculated as:
 # t_stat = (X_305-P_305)/s_pred
 #
@@ -30,7 +31,6 @@
 #   df_probability_full: all columns used for calculating P values.
 #
 f_forecast_P <- function(predicted_MY, forecasted_305d_MY, n_params = 4){
-
 
   # Calculate goodness-of-fit and prepare the rMSPE_adj for s_pred
   individual_fit_stats <-
@@ -67,6 +67,6 @@ f_forecast_P <- function(predicted_MY, forecasted_305d_MY, n_params = 4){
   ))
 
 
-  }
+}
 
 

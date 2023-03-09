@@ -1,15 +1,17 @@
 # Function for calculating goodness of fit statistics
 # David Innes
 
+
 # requires car package (for Durbin Watson calc)
 
 # INPUT:
 #  - actual_vec: vector of numbers representing actual observed values
 #  - fitted_vec: vector of numbers representing fitted predicted values
-#  - n_params: number of parameters in the model used to get the fitted_vec. This is used for adjsuted-R2 calculation.
+#  - n_params: number of parameters in the model used to get the fitted_vec. This is used for adjusted-R2 calculation.
 
 # OUTPUT:
-#  - A dataframe of: R2_adj, RMSPE, RMSE, DW, CCC, mean_bias, slope_bias, random_error, MAE
+#  - A dataframe of statistics calculated, see list at end of script for details.
+
 
 f_goodness_of_fit <- function(actual_vec, fitted_vec, n_params){
   # n_params = number of parameters in the model. Used for calculating adjusted-R2. E.g. use 4 for Dijkstra model
@@ -71,9 +73,13 @@ f_goodness_of_fit <- function(actual_vec, fitted_vec, n_params){
   # MAE - Mean Absolute Error
   #########################
 
+  # absolute (e.g. kg/d)
   MAE <- sum(abs(.resid))/n # MAE =  ∑|Obs-Pred| / n (number of obs)
 
   MAE_adj <- sum(abs(.resid))/(n-n_params)
+
+  # as percent of mean observed
+  MAE_perc <- MAE / actual_mean * 100
 
   #########################
   # Decomposition of error
@@ -115,10 +121,13 @@ f_goodness_of_fit <- function(actual_vec, fitted_vec, n_params){
   df_out <-
     list(
       n = n,
+      obs_mean = actual_mean,
+      pred_mean = fitted_mean,
       R2_adj = R2_adj,
       RMSPE = rMSPE,
-      RMSE = RMSE,
+      RMSE_perc = RMSE,
       MAE = MAE,
+      MAE_perc = MAE_perc,
       RMSPE_adj = rMSPE_adj,
       MAE_adj = MAE_adj,
       DW = DW,

@@ -27,6 +27,8 @@
   ###########################
   ## Set BOUNDs for parameters
   # This can be set as mean+SD*n :
+
+  # NOTE: these are currently set to match publication, not the example dataset
   b_lower = 0
   b_upper = 0.10924
 
@@ -110,7 +112,6 @@
 
  # read in select filed
   working_data <- readRDS(paste0("./Outputs/", file_list[file_subset]))
-
 
 
 

@@ -102,6 +102,7 @@ f_iterate_fitting <- function(cleaned_data_in,
                             ))) %>%
     collect()
 
+  print(fits_dijkstra)
 
   # get summary
   info_dijkstra <- fits_dijkstra %>%
@@ -142,15 +143,6 @@ f_iterate_fitting <- function(cleaned_data_in,
     select(!where(is.list))
 
 
-  # Calculate Leverage
-  # leverage_dijkstra <-
-  #   fits_dijkstra %>%
-  #   mutate(p = map(fit, f_tangential_leverage)) %>%
-  #   unnest(p) %>%
-  #   select(-where(is.list))
-
-
-
   #############################
   # FORECASTING
   # Calculate fitted values for all DIM
@@ -160,7 +152,6 @@ f_iterate_fitting <- function(cleaned_data_in,
     pivot_wider(names_from = term, values_from=estimate)
 
   # fits data from day 0 to max DIM for all lactations (to cover all possible date ranges for plotting)
-  #cleaned_data_in %>% pull(DIM) %>% max()
   complete_template <-
     cleaned_data_in %>%
     group_by(ID) %>%
@@ -177,22 +168,8 @@ f_iterate_fitting <- function(cleaned_data_in,
     select(-a,-b,-b0,-c) %>%
     # add on my column (observed my) for plotting downstream
     left_join(
-      #preds_dijkstra %>% select(DIM, ID, my)
       cleaned_data_in %>% select(DIM, ID, my)
     )
-
-  #OLD:
-  # fitted_values <-
-  #   params_wide_dijkstra %>%
-  #   mutate(tibble(DIM = list(seq(1,1000,by=1)))) %>%
-  #   unnest(DIM) %>%
-  #   mutate(fitted_MY =  dijkstra_eq(a,b,b0,c,DIM)) %>%
-  #   select(-a,-b,-b0,-c) %>%
-  #   # add on my column (observed my)
-  #   left_join(
-  #     preds_dijkstra %>% select(DIM, ID, my)
-  #   )
-
 
   #############################
   # FORECASTED PERSISTENCY
@@ -247,7 +224,6 @@ f_iterate_fitting <- function(cleaned_data_in,
     individual_fit_stats = individual_fit_stats_dijkstra,
     fitted_MY_all = fitted_values,
     fitted_305d_MY = fitted_305d_MY_dijkstra,
-    #leverage_df = leverage_dijkstra,
     fits_nls_table = fits_dijkstra,
     P_wide = t_out$df_P_wide_out,
     P_full_calc = t_out$df_probability_full

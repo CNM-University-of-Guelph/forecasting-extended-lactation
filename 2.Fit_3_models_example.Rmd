@@ -19,7 +19,7 @@ Output: saves 4x dataframes:
 1. Combined_params
 2. Combined_fit_stats
 3. Combined_preds
-4. combined fit stats
+4. Combined fit stats
 Also saves plots. 
 
 It also leaves various objects in environment which can be perused as well, particularly if you want to access the actual fit objects. See the source code for how it is structured (in nested data frames).
@@ -44,35 +44,34 @@ source("./functions/f_goodness_of_fit.R")
 ```
 
 # Execute:
-This can be slow!Consider running it via command line on a server, if available. 
+This can be slow! Consider running it via command line on a server, if available. 
 ```{r}
 source("2.fit_3_lac_models_parallel.R")
 ```
 
-output:
+Example Output:
 ```{}
 [1] "START"
-[1] "2023-01-19 13:48:30 EST"
+[1] "2023-03-09 11:13:44 EST"
 [1] "Fitting DIJKSTRA..."
-[1] "2023-01-19 13:48:58 EST"
+[1] "2023-03-09 11:14:39 EST"
 [1] "Fitting DIJKSTRA... END"
-[1] "2023-01-19 13:54:14 EST"
+[1] "2023-03-09 11:20:38 EST"
 [1] "Fitting WOOD..."
-[1] "2023-01-19 13:54:15 EST"
+[1] "2023-03-09 11:20:38 EST"
 [1] "Fitting WOOD...END"
-[1] "2023-01-19 13:57:04 EST"
+[1] "2023-03-09 11:23:12 EST"
 [1] "Fitting WILMINK..."
-[1] "2023-01-19 13:57:04 EST"
+[1] "2023-03-09 11:23:12 EST"
 [1] "Fitting WILMINK...END"
-[1] "2023-01-19 13:59:23 EST"
+[1] "2023-03-09 11:25:31 EST"
 [1] "Output files..."
-[1] "2023-01-19 13:59:23 EST"
-Joining, by = "ID"Joining, by = "ID"Joining, by = "ID"[1] "Output files...END"
-[1] "2023-01-19 13:59:41 EST"
+[1] "2023-03-09 11:25:31 EST"
+[1] "Output files...END"
+[1] "2023-03-09 11:25:42 EST"
 [1] "Output plots..."
-[1] "2023-01-19 13:59:46 EST"
-Warning: Using `size` aesthetic for lines was deprecated in ggplot2 3.4.0.
-Please use `linewidth` instead.[1] "plot_1001_8.png"
+[1] "2023-03-09 11:25:42 EST"
+[1] "plot_1001_8.png"
 [1] "plot_1002_1.png"
 [1] "plot_1024_1.png"
 [1] "plot_1025_4.png"
@@ -154,6 +153,10 @@ Please use `linewidth` instead.[1] "plot_1001_8.png"
 [1] "plot_1975_1.png"
 [1] "plot_1978_2.png"
 [1] "Output plots...END"
-[1] "2023-01-19 14:10:41 EST"
+[1] "2023-03-09 11:31:28 EST"
 [1] "END"
 ```
+
+
+
+

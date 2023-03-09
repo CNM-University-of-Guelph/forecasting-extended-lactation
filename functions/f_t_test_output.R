@@ -1,12 +1,10 @@
 # Run t test between groups of interest
-# David Innes
-
 # Makes comparisons within a Model, but between the 'group_by' provided to function
 
 # requires: rstatix
 
 # Input:
-#   df_in =
+#   df_in = parameter or fit stats in long format with column 'variable' and 'value'
 #   group_by = str of either 'Parity_class' or 'Lac_len_group'
 
 # Output:
@@ -34,7 +32,7 @@ f_t_test_output <-
                                                p.adjust.method = "none",
                                                detailed = TRUE
                                              ) %>%
-                                             mutate(p_rounded = round(p, digits = 3),
+                                             mutate(p_rounded = round(p, digits = 3) %>% format(nsmall = 3),
                                                     sig = case_when(p < 0.05 ~ TRUE, TRUE ~ FALSE))
                                          }
       )) %>%

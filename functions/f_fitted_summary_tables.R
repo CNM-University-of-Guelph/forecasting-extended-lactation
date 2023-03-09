@@ -36,7 +36,7 @@ f_format_pub <- function(summary_df, groups_by){
     select({{ groups_by }}, contains('mean'), contains('sd'), -contains('maxDIM')) %>%
     pivot_longer(cols = where(is.double)) %>%
     pivot_wider(names_from = {{groups_by}}, values_from=value) %>%
-    mutate(across(where(is.double), ~round(.x, 4)))
+    mutate(across(where(is.double), ~round(.x, 4) ))
 }
 
 
