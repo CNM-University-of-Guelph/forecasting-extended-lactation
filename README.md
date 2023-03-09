@@ -8,7 +8,7 @@ This repository contains the code used to analyse the data published in \_\_\_\_
 
 **Fitting mathematical functions to extended lactation curves and forecasting late-lactation milk yields of dairy cows**
 
-David J. Innes, Linaya J. Pot, David J. Seymour, James France, Jan Dijkstra, John Doelman, and John P. Cant
+David J. Innes, Linaya J. Pot, Dave J. Seymour, James France, Jan Dijkstra, John Doelman, and John P. Cant
 
 DOI: \_\_\_\_\_\_
 
@@ -16,7 +16,7 @@ DOI: \_\_\_\_\_\_
 
 The raw data used in the analysis published in the manuscript remains confidential, but simulated data is provided with characteristics that allow most aspects of this code to be utilised to replicate very similar outputs to those published. However, some of the provided data is not physiologically relevant and the distribution of error is comparatively very uniform, so use with caution and expect real-life data to behave a little differently.
 
-The code in it's current form are provided to ensure that reproducibility of our research is possible, but it is not documented or formatted as a proper package and is perhaps not overly user-friendly. It does, however, require only a file with the following columns to work:
+The codes are provided to ensure that reproducibility of our research is possible, but it is not documented or formatted as a proper package and is perhaps not overly user-friendly. It does, however, require only a file with the following columns to work:
 
 -   `Cow` - cow's number identification
 
@@ -32,7 +32,7 @@ If you are not familiar with these types of code, the easiest way to get started
 
 Some of the initial cleaning steps were developed to fix issues specific to our dataset, partially because we only had access to the 5 columns of data above, and not any of the management data or dates that would otherwise be available on-farm.
 
-The expected output from running the `.Rmd` files can be viewed at: <https://cnm-university-of-guelph.github.io/forecasting-extended-lactation/> (these are the `.html` files located in the `docs/` folder, which are copies of the `.html` files from each associated `.Rmd` file in the main directory). In addition, all expected output data is saved in the `Outputs/` folder.
+The expected output from running the `.Rmd` files can be viewed at: <https://cnm-university-of-guelph.github.io/forecasting-extended-lactation/> (these are the `.html` files located in the `docs/` folder, which are copies of the `.html` files from each associated `.Rmd` file in the main directory). In addition, all expected output data are saved in the `Outputs/` folder.
 
 Please contact David Innes (innesd\@uoguelph.ca) or the other authors on our manuscript if you are interested in further explanations or assistance. Also, feel free to file an issue on github if you encounter a bug or have feature requests.
 
@@ -59,3 +59,10 @@ Please contact David Innes (innesd\@uoguelph.ca) or the other authors on our man
 | zoo           | 1.8-11  |         
 | nlme          | 3.1-160 |       
 | parallel      | 4.2.2   | 
+
+Executed with: 
+ version  R version 4.2.2 (2022-10-31 ucrt)
+ os       Windows 10 x64 (build 22621)
+ system   x86_64, mingw32
+ ui       RStudio
+ rstudio  2022.12.0+353 Elsbeth Geranium (desktop)
