@@ -14,7 +14,7 @@ DOI: \_\_\_\_\_\_
 
 ------------------------------------------------------------------------
 
-The raw data used in the analysis published in the manuscript remains confidential, but simulated data is provided with characteristics that allow most aspects of this code to be utilised to replicate very similar outputs to those published. However, some of the provided data is not physiologically relevant and the distribution of error is comparatively very uniform, so use with caution and expect real-life data to behave a little differently.
+The raw data used in the analysis published in the manuscript remains confidential, but simulated data are provided with characteristics that allow most aspects of this code to be utilised to replicate very similar outputs to those published. However, some of the provided data are not physiologically relevant and the distribution of error is comparatively very uniform, so use with caution and expect real-life data to behave a little differently.
 
 The codes are provided to ensure that reproducibility of our research is possible, but it is not documented or formatted as a proper package and is perhaps not overly user-friendly. It does, however, require only a file with the following columns to work:
 
@@ -26,7 +26,7 @@ The codes are provided to ensure that reproducibility of our research is possibl
 
 -   `DIM` - days in milk; d
 
--   `my` - milk yield; kg
+-   `my` - milk yield; kg/d
 
 If you are not familiar with these types of code, the easiest way to get started is to copy this entire repository to your computer and open the `.Rmd` files in numerical order within RStudio. You will need to install the required packages as you go.
 
