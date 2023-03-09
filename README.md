@@ -60,9 +60,11 @@ Please contact David Innes (innesd\@uoguelph.ca) or the other authors on our man
 | nlme          | 3.1-160 |       
 | parallel      | 4.2.2   | 
 
-Executed with: 
- version  R version 4.2.2 (2022-10-31 ucrt)
- os       Windows 10 x64 (build 22621)
- system   x86_64, mingw32
- ui       RStudio
- rstudio  2022.12.0+353 Elsbeth Geranium (desktop)
+**Executed with:**
+```
+version  R version 4.2.2 (2022-10-31 ucrt)
+os       Windows 10 x64 (build 22621)
+system   x86_64, mingw32  
+ui       RStudio  
+rstudio  2022.12.0+353 Elsbeth Geranium (desktop)
+ ```
