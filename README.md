@@ -4,13 +4,13 @@
 
 <!-- badges: end -->
 
-This repository contains the code used to analyse the data published in \_\_\_\_\_, titled:
+This repository contains the code used to analyse the data published in Journal of Dairy Science, titled:
 
 **Fitting mathematical functions to extended lactation curves and forecasting late-lactation milk yields of dairy cows**
 
 David J. Innes, Linaya J. Pot, Dave J. Seymour, James France, Jan Dijkstra, John Doelman, and John P. Cant
 
-DOI: \_\_\_\_\_\_
+DOI: https://doi.org/10.3168/jds.2023-23478
 
 ------------------------------------------------------------------------
 
